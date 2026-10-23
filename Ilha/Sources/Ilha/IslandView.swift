@@ -16,7 +16,7 @@ struct IslandView: View {
         let mode = store.mode
         let size = store.islandSize
         let shape = NotchShape(topRadius: SessionStore.topRadius, bottomRadius: mode == .collapsed ? 10 : 24)
-        let hidden = mode == .collapsed && store.sessions.isEmpty
+        let hidden = mode == .collapsed && store.sessions.isEmpty && store.timer == nil
 
         ZStack(alignment: .top) {
             if mode == .permission || mode == .finished || mode == .dropTarget {
@@ -86,11 +86,90 @@ struct CollapsedView: View {
             Mascot(mood: store.overallStatus.mood, size: 18)
                 .frame(width: 36, height: store.notchHeight)
             Spacer(minLength: 0)
-            StatusIndicator(status: store.overallStatus, count: store.sessions.count)
-                .frame(width: 36, height: store.notchHeight)
+            if let timer = store.timer {
+                TimerBadge(timer: timer)
+                    .frame(width: 76, height: store.notchHeight)
+            } else {
+                StatusIndicator(status: store.overallStatus, count: store.sessions.count)
+                    .frame(width: 36, height: store.notchHeight)
+            }
         }
         .padding(.horizontal, SessionStore.topRadius)
         .frame(height: store.notchHeight)
+    }
+}
+
+// MARK: - Timer
+
+struct TimerRing: View {
+    let progress: Double
+    var size: CGFloat = 11
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(Color.white.opacity(0.2), lineWidth: 2)
+            Circle()
+                .trim(from: 0, to: 1 - progress)
+                .stroke(Color.white, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// Orelha direita do notch recolhido: anel + "24:59".
+struct TimerBadge: View {
+    let timer: IslandTimer
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
+            HStack(spacing: 6) {
+                TimerRing(progress: timer.progress(at: timeline.date))
+                Text(IslandTimer.clock(timer.remaining(at: timeline.date)))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundColor(.ink)
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
+/// Cartão do timer na lista do hover.
+struct TimerCard: View {
+    @ObservedObject var store: SessionStore
+    let timer: IslandTimer
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
+            let progress = timer.progress(at: timeline.date)
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 10) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.ink)
+                    Text(timer.label)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.ink)
+                    Text("·").foregroundColor(.inkSecondary)
+                    Text(IslandTimer.clock(timer.remaining(at: timeline.date)))
+                        .font(.system(size: 12, design: .rounded).monospacedDigit())
+                        .foregroundColor(.inkSecondary)
+                    Spacer(minLength: 0)
+                    Button("Cancelar") { store.cancelTimer() }
+                        .buttonStyle(PillButtonStyle(kind: .text, height: 20))
+                }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.12))
+                        Capsule().fill(Color.white).frame(width: geo.size.width * progress)
+                    }
+                }
+                .frame(height: 3)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 50)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))
+        }
     }
 }
 
@@ -150,6 +229,10 @@ struct HoverView: View {
                     .foregroundColor(.inkSecondary)
             }
             .frame(height: 40)
+
+            if let timer = store.timer {
+                TimerCard(store: store, timer: timer)
+            }
 
             if store.sessions.isEmpty {
                 Text("Nenhuma sessão do Claude Code agora.")
@@ -414,7 +497,7 @@ struct AskView: View {
 
     private var questionField: some View {
         HStack(spacing: 8) {
-            TextField(ask.file == nil ? "Pergunte algo, “abrir app” ou um link…" : "Pergunte algo sobre o arquivo…", text: $ask.question)
+            TextField(ask.file == nil ? "Pergunte algo, “abrir app”, “pomodoro” ou um link…" : "Pergunte algo sobre o arquivo…", text: $ask.question)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .foregroundColor(.ink)

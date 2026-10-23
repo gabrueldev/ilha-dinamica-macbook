@@ -103,6 +103,7 @@ final class AskModel: ObservableObject {
 
     /// Fecha a ilha; `false` = não devolver o foco ao app anterior (acabamos de abrir outro).
     var onClose: ((Bool) -> Void)?
+    var onTimer: ((TimerCommand.Action) -> Void)?
     private var task: Task<Void, Never>?
 
     func load(_ url: URL) {
@@ -133,6 +134,22 @@ final class AskModel: ObservableObject {
     func send() {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, !streaming, !loadingFile else { return }
+
+        // "pomodoro", "timer 25" etc. também não precisam da API.
+        if file == nil, let action = TimerCommand.parse(q) {
+            onTimer?(action)
+            question = ""
+            error = nil
+            if case .start(let seconds, let label) = action {
+                info = "\(label) de \(IslandTimer.spoken(seconds)) iniciado"
+            } else {
+                info = "Timer cancelado"
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                MainActor.assumeIsolated { self?.onClose?(true) }
+            }
+            return
+        }
 
         // "abrir {coisa}" e links soltos não precisam da API.
         if file == nil && Launcher.looksLikeCommand(q) {

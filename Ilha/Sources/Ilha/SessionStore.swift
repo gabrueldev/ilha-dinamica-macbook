@@ -67,6 +67,7 @@ final class SessionStore: ObservableObject {
     }
     @Published private(set) var finished: FinishedInfo?
     @Published private(set) var askActive = false
+    @Published private(set) var timer: IslandTimer?
     @Published var hovering = false
     @Published var dragging = false
 
@@ -80,10 +81,12 @@ final class SessionStore: ObservableObject {
     /// Quando o cartão de permissão da frente apareceu (evita ⏎ acidental).
     private(set) var permissionShownAt = Date.distantPast
     private var cleanupTimer: Timer?
+    private var countdown: Timer?
 
     private init() {
         UserDefaults.standard.register(defaults: ["soundOnFinish": true])
         ask.onClose = { [weak self] restoreFocus in self?.closeAsk(restoreFocus: restoreFocus) }
+        ask.onTimer = { [weak self] action in self?.handleTimer(action) }
         cleanupTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.cleanup() }
         }
@@ -118,11 +121,12 @@ final class SessionStore: ObservableObject {
         let tr = Self.topRadius
         switch mode {
         case .collapsed:
-            let ears: CGFloat = sessions.isEmpty ? 0 : 72
+            let ears: CGFloat = timer != nil ? 112 : sessions.isEmpty ? 0 : 72
             return CGSize(width: notchWidth + ears + 2 * tr, height: nh)
         case .hover:
             let rows = CGFloat(max(sessions.count, 1))
-            return CGSize(width: 460, height: min(max(nh + 100 + 44 * rows, 140), 320))
+            let timerCard: CGFloat = timer != nil ? 58 : 0
+            return CGSize(width: 460, height: min(max(nh + 100 + 44 * rows + timerCard, 140), 380))
         case .permission:
             return CGSize(width: 480, height: nh + 160)
         case .finished:
@@ -291,14 +295,14 @@ final class SessionStore: ObservableObject {
 
     // MARK: - Concluído
 
-    private func showFinished(project: String, message: String) {
+    private func showFinished(project: String, message: String, sound: Bool? = nil, seconds: Double = 4) {
         let info = FinishedInfo(project: project, message: message)
         finished = info
-        if UserDefaults.standard.bool(forKey: "soundOnFinish") {
+        if sound ?? UserDefaults.standard.bool(forKey: "soundOnFinish") {
             NSSound(named: "Glass")?.play()
         }
         let id = info.id
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
             MainActor.assumeIsolated {
                 if self?.finished?.id == id { self?.finished = nil }
             }
@@ -307,6 +311,39 @@ final class SessionStore: ObservableObject {
 
     func dismissFinished() {
         finished = nil
+    }
+
+    // MARK: - Timer
+
+    private func handleTimer(_ action: TimerCommand.Action) {
+        switch action {
+        case .start(let seconds, let label): startTimer(seconds: seconds, label: label)
+        case .cancel: cancelTimer()
+        }
+    }
+
+    func startTimer(seconds: TimeInterval, label: String) {
+        timer = IslandTimer(label: label, duration: seconds, end: Date().addingTimeInterval(seconds))
+        // Checa a cada segundo pelo relógio de parede: o Mac pode dormir no meio e o asyncAfter atrasaria.
+        countdown?.invalidate()
+        let countdown = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkTimer() }
+        }
+        RunLoop.main.add(countdown, forMode: .common)
+        self.countdown = countdown
+    }
+
+    func cancelTimer() {
+        countdown?.invalidate()
+        countdown = nil
+        timer = nil
+    }
+
+    private func checkTimer() {
+        guard let timer, timer.remaining() <= 0 else { return }
+        cancelTimer()
+        showFinished(project: timer.label, message: "Acabou o tempo · \(IslandTimer.spoken(timer.duration))",
+                     sound: true, seconds: 8)
     }
 
     // MARK: - Perguntar

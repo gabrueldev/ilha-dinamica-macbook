@@ -141,9 +141,24 @@ final class NotchController {
         previousApp = nil
     }
 
+    /// Sem menu principal (app de barra de menus), ⌘C/⌘V/⌘X/⌘A/⌘Z não chegam aos campos de texto.
+    private static let editActions: [String: Selector] = [
+        "x": #selector(NSText.cut(_:)),
+        "c": #selector(NSText.copy(_:)),
+        "v": #selector(NSText.paste(_:)),
+        "a": #selector(NSText.selectAll(_:)),
+        "z": Selector(("undo:")),
+    ]
+
     /// ⏎ permite, ⎋ nega (permissão); ⎋ fecha (pergunta).
     private func handleKey(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        if flags == .command || flags == [.command, .shift],
+           let key = event.charactersIgnoringModifiers?.lowercased(),
+           var action = Self.editActions[key] {
+            if key == "z" && flags.contains(.shift) { action = Selector(("redo:")) }
+            return NSApp.sendAction(action, to: nil, from: panel)
+        }
         guard flags.isEmpty else { return false }
         switch store.mode {
         case .permission:

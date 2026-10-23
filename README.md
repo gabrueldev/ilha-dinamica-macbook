@@ -41,6 +41,7 @@ e pergunte ao Claude sobre qualquer arquivo arrastando ele pro notch.
 | ✅ | **Aviso de conclusão** | Ao terminar, mostra um trecho da última mensagem por 4 s, com som opcional. |
 | 📎 | **Arraste e pergunte** | Solte um PDF, imagem, texto ou `.docx` no notch, faça uma pergunta e receba a resposta em streaming. |
 | ⚡ | **Comandos rápidos** | Abra apps, pastas e sites direto da ilha, sem precisar de chave da API. |
+| ⏱ | **Timer e Pomodoro** | Digite `pomodoro` ou `timer 10` e a contagem aparece no notch, com aviso e som ao acabar. |
 | 🫧 | **Mascote** | Um mascote próprio que muda de expressão: ocioso, trabalhando, esperando, concluído e "comendo" arquivos. |
 
 A Ilha funciona em Macs **com ou sem notch**: sem notch, ela fica centralizada no topo da tela. Não aparece no Dock, só no ícone ✦ da barra de menus. Quando não há nenhuma sessão ativa, ela fica invisível.
@@ -120,6 +121,23 @@ abrir ~/Projetos         → abre qualquer caminho
 gabrueldev.com           → abre no Safari (com ou sem "abrir")
 localhost:3000           → também funciona
 ```
+
+### Timer e Pomodoro
+No mesmo campo, digite:
+
+```text
+pomodoro                 → 25 min
+pausa                    → 5 min (pausa longa → 15 min)
+timer 10                 → 10 min (número sozinho = minutos)
+timer 90s · timer 1h30   → segundos, horas, combinações
+timer 1:30               → 1 min 30 s
+cancelar timer           → para a contagem
+```
+
+A contagem fica na orelha direita do notch (também sem sessões abertas). No hover aparece a barra de progresso com **Cancelar**. Quando acaba, a ilha avisa por 8 s e toca um som (mesmo com "Som ao terminar" desligado).
+
+> [!TIP]
+> Os campos de texto da ilha aceitam <kbd>⌘</kbd><kbd>C</kbd>, <kbd>⌘</kbd><kbd>V</kbd>, <kbd>⌘</kbd><kbd>X</kbd>, <kbd>⌘</kbd><kbd>A</kbd> e <kbd>⌘</kbd><kbd>Z</kbd>.
 
 ---
 

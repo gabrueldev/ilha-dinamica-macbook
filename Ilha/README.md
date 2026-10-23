@@ -41,6 +41,7 @@ Recolhida, ela fica invisível enquanto não houver nenhuma sessão do Claude Co
   - `abrir calculadora`, `abrir photoshop`, `abrir vscode` → abre o app (aceita o nome em português).
   - `abrir downloads`, `abrir ~/Projetos` → abre a pasta no Finder.
   - `gabrueldev.com`, `https://github.com`, `localhost:3000` → abre no Safari (com ou sem `abrir`).
+  - `pomodoro` (25 min), `pausa` (5 min), `timer 10`, `timer 90s`, `timer 1h30` → contagem no notch, aviso e som ao acabar; `cancelar timer` para.
 
 ## Chave da API (só para perguntar sobre arquivos)
 
