@@ -1,6 +1,6 @@
 <div align="center">
 
-# ✦ Ilha
+# ✦ Ilya
 
 **Um "dynamic island" no notch do MacBook para o Claude Code.**
 
